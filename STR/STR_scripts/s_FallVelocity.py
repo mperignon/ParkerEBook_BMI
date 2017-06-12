@@ -1,5 +1,6 @@
 from math import sqrt, log10, pow
 import json, os, yaml
+import numpy as np
         
 
 class FallVelocity_solver(object):
@@ -72,23 +73,24 @@ class FallVelocity_solver(object):
                     params[key] = default_params[key]
         
         
-        self._grain_size = float(params['particle_diameter']) / 1000. # meters
-        self._nu = float(params['fluid__kinematic_viscosity'])
-        self._g = float(params['gravitational_acceleration'])
-        self._rho_w = float(params['fluid__density'])
-        self._rho_s = float(params['particle__density'])
+        self._grain_size = np.array([float(params['particle_diameter'])]) # mm
+        self._nu = np.array([float(params['fluid__kinematic_viscosity'])])
+        self._g = np.array([float(params['gravitational_acceleration'])])
+        self._rho_w = np.array([float(params['fluid__density'])])
+        self._rho_s = np.array([float(params['particle__density'])])
         self._output_filename = str(params['output_filename'])
         
         # Outputs
-        self._vs = None
-        self._Re = None
-        self._Rf = None
+        self._vs = np.empty((1,))
+        self._Re = np.empty((1,))
+        self._Rf = np.empty((1,))
     
     
     @property
     def grain_size(self):
         """Grain size in mm."""
-        return self._grain_size * 1000 # to report in mm
+        
+        return self._grain_size
 
 
     @grain_size.setter
@@ -100,7 +102,7 @@ class FallVelocity_solver(object):
         new_D : float
             New grain size in mm.
         """
-        self._grain_size = new_D / 1000.     # convert from mm to m
+        self._grain_size[:] = new_D
     
     @property
     def kinematic_viscosity(self):
@@ -117,7 +119,7 @@ class FallVelocity_solver(object):
             New kinematic viscosity in m2/s.
         """
         
-        self._nu = new_nu
+        self._nu[:] = new_nu
         
         
     @property
@@ -135,7 +137,7 @@ class FallVelocity_solver(object):
             New gravitational acceleration in m/s2.
         """
         
-        self._g = new_g
+        self._g[:] = new_g
         
     @property
     def density_of_fluid(self):
@@ -152,7 +154,7 @@ class FallVelocity_solver(object):
             New density of the fluid in Kg/m3.
         """
         
-        self._rho_w = new_rhow
+        self._rho_w[:] = new_rhow
         
     @property
     def density_of_particle(self):
@@ -170,7 +172,7 @@ class FallVelocity_solver(object):
             New density of the particle in Kg/m3.
         """
         
-        self._rho_s = new_rhos
+        self._rho_s[:] = new_rhos
         
             
     
@@ -179,6 +181,7 @@ class FallVelocity_solver(object):
         """Settling velocity in m/s"""
         
         return self._vs
+        
     
     @property
     def Reynolds_number(self):
@@ -198,20 +201,23 @@ class FallVelocity_solver(object):
     
         self._R = (self._rho_s - self._rho_w) / self._rho_w
         
-        self.calculateReynoldsnumber()     
-        self.calculate_dimensionless_fall_velocity()                                       
-        self.calculate_settling_velocity()
+        self._Re[:] = self.calculateReynoldsnumber()     
+        self._Rf[:] = self.calculate_dimensionless_fall_velocity()                                       
+        self._vs[:] = self.calculate_settling_velocity()
+        
         
         
     def calculateReynoldsnumber(self):
 
-        self._Re = sqrt(self._R * self._g * self._grain_size) * \
-                    self._grain_size / self._nu
+        _Re = sqrt(self._R * self._g * (self._grain_size/1000.)) * \
+                    (self._grain_size/1000.) / self._nu
 
         failMessage  = "This equation is only valid for Reynolds numbers "\
                         "below 2.6e+06. The calculated Reynolds number for "\
-                        "this particle is %.2g" % self._Re
-        assert self._Re <= 2.6e6, failMessage       
+                        "this particle is %.2g" % _Re
+        assert _Re <= 2.6e6, failMessage       
+        
+        return _Re
   
   
         
@@ -221,13 +227,16 @@ class FallVelocity_solver(object):
         y = (-3.76715) + (1.92944*x) - (0.09815*x*x) - \
             (0.00575*x*x*x) + (0.00056*x*x*x*x)
         
-        self._Rf = pow(pow(10,y) / self._Re, 1./3)
+        _Rf = pow(pow(10,y) / self._Re, 1./3)
 
+        return _Rf
 
         
     def calculate_settling_velocity(self):
         
-        self._vs = self._Rf * sqrt(self._R * self._g * self._grain_size)
+        _vs = self._Rf * sqrt(self._R * self._g * (self._grain_size/1000.))
+        
+        return _vs
         
 
     def _assure_path_exists(self, path):
@@ -245,14 +254,14 @@ class FallVelocity_solver(object):
         self._assure_path_exists(self._output_filename)
 
         output_dict = {
-            'Grain_size_mm' : self._grain_size,
-            'Kinematic_viscosity' : self._nu,
-            'Gravitational_acceleration' : self._g,
-            'Density_of_fluid' : self._rho_w,
-            'Density_of_sediment' : self._rho_s,
-            'Reynolds_number' : self._Re,
-            'Dimensionless_fall_velocity' : self._Rf,
-            'Settling_velocity' : self._vs
+            'Grain_size_mm' : list(self._grain_size),
+            'Kinematic_viscosity' : list(self._nu),
+            'Gravitational_acceleration' : list(self._g),
+            'Density_of_fluid' : list(self._rho_w),
+            'Density_of_sediment' : list(self._rho_s),
+            'Reynolds_number' : list(self._Re),
+            'Dimensionless_fall_velocity' : list(self._Rf),
+            'Settling_velocity' : list(self._vs)
         }
         
         with open(self._output_filename, 'w') as f:

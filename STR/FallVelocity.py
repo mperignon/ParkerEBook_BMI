@@ -100,6 +100,7 @@ class FallVelocity(Bmi):
            update() just runs the script once"""
            
         self._FV.run()
+        
 
     def update_frac(self, time_frac):
         """Update model by a fraction of a time step.
@@ -131,7 +132,6 @@ class FallVelocity(Bmi):
     def finalize(self):
         """Finalize model."""
         self._FV.finalize()
-        self._FV = None
         
         
         
@@ -213,7 +213,7 @@ class FallVelocity(Bmi):
         array_like
             Copy of values.
         """
-        return self.get_value_ref(var_name)
+        return self.get_value_ref(var_name).copy()
 
 
     def set_value(self, var_name, src):
@@ -226,7 +226,8 @@ class FallVelocity(Bmi):
         src : int or float
             New value
         """
-        self._values[var_name] = float(src)
+        val = self.get_value_ref(var_name)
+        val[:] = src
 
 
     def get_component_name(self):
