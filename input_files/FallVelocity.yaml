@@ -1,0 +1,6 @@
+particle_diameter: 0.1
+fluid__kinematic_viscosity: 1e-6
+gravitational_acceleration: 9.81
+fluid__density: 1000.
+particle__density: 2650.
+output_filename: 'output/FallVelocity_output.json'
