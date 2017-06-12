@@ -226,9 +226,7 @@ class FallVelocity(Bmi):
         src : int or float
             New value
         """
-        val = self.get_value_ref(var_name)
-        val = float(src)
-
+        self._values[var_name] = float(src)
 
 
     def get_component_name(self):
